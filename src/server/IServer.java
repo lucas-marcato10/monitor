@@ -2,7 +2,7 @@ package server;
 
 import java.net.Socket;
 import java.net.ServerSocket;
-public interface IServerNode {
+public interface IServer {
     ServerSocket createSocket();
     void bind(ServerSocket serverSocket, int port);
     void listen(ServerSocket serverSocket);
