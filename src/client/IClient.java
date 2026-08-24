@@ -1,8 +1,9 @@
 package client;
 
 import java.net.Socket;
+import java.util.UUID;
 
 public interface IClient {
-    Socket createSocket();
-    void connect(Socket socket,String host,int port);
+    void connect(String host,int port);
+    UUID getUUID();
 }
