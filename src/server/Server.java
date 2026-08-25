@@ -1,94 +1,64 @@
 package server;
 
-import core.MonitorTasks;
-import core.Session;
-
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
-public class Server implements IServer{
-    private final ConcurrentMap<UUID, Session> activeSessions = new ConcurrentHashMap<>();
-    private ServerSocket socket;
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
-    private final MonitorTasks monitor = new MonitorTasks();
-    @Override
-    public void start(int port) {
-        try{
-            // Boot Server Socket.
-            this.socket = new ServerSocket(port);
-            System.out.println("Servidor rodando em: " + port);
+public class Server implements IServer {
 
-            while (true){
-
-                Socket client = this.socket.accept();
-
-                Session session = new Session(client);
-                activeSessions.put(session.getUuid(),session);
-
-                session.send(nowTimestamp() + ": CONECTADO!!");
-                session.send("Comandos: CPU | RAM | EXIT");
-                Thread.startVirtualThread(()->handleSession(session));
-            }
-        }catch (IOException e){
-            throw new RuntimeException(e);
-        }
+    public Server() {
     }
 
-    private void handleSession(Session session){
+    @Override
+    public ServerSocket createSocket() {
         try {
-            String remoteInput;
-            while ((remoteInput = session.read()) != null){
-                switch(remoteInput.toUpperCase().trim()){
-                    case "CPU" -> {
-                        String cpuUsage = monitor.collectCpu();
-                        session.send(cpuUsage);
-                    }
-                    case "RAM" -> {
-                        String ramUsage = monitor.collectRam();
-                        session.send(ramUsage);
-                    }
-
-                    case "EXIT" -> {
-                        session.send("Desconectando.");
-                        session.close();
-                    }
-                    default -> System.out.println("Comando inválido.");
-                }
-            }
+            return new ServerSocket();
         } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        finally {
-            //Evita leak de conexão.
-            activeSessions.remove(session.getUuid());
-            session.close();
-            System.out.println("Cliente Desconectado: " + session);
+            throw new RuntimeException("Falha ao criar ServerSocket", e);
         }
     }
 
     @Override
-    public void stop() {
-        try{
-            if(socket != null) this.socket.close();
-        }catch (IOException e){
-            e.printStackTrace();
+    public void bind(ServerSocket serverSocket, int port) {
+        try {
+            serverSocket.bind(new InetSocketAddress(port));
+            System.out.println("Vínculo à porta " + port + " feito.");
+        } catch (IOException e) {
+            throw new RuntimeException("Falha ao fazer bind na porta " + port, e);
         }
     }
 
-    public void gracefulShutdown(){
-        for(Session session : this.activeSessions.values()){
-            session.close();
-        }
-        activeSessions.clear();
+    @Override
+    public void listen(ServerSocket serverSocket) {
+        System.out.println("Aguardando conexões...");
     }
 
-    public static String nowTimestamp(){
-        return LocalDateTime.now().format(FORMATTER);
+    @Override
+    public Socket accept(ServerSocket serverSocket) {
+        try {
+            Socket clientSocket = serverSocket.accept();
+            System.out.println("Client connected.");
+            return clientSocket;
+        } catch (IOException e) {
+            throw new RuntimeException("Falha no accept", e);
+        }
+    }
+
+    // Método que responde ao server.start(port) da Main.java
+    public void start(int port) {
+        ServerSocket serverSocket = createSocket();
+        bind(serverSocket, port);
+        listen(serverSocket);
+
+        while (!serverSocket.isClosed()) {
+            try {
+                Socket clientSocket = accept(serverSocket);
+                ClientHandler handler = new ClientHandler(clientSocket);
+                new Thread(handler).start();
+            } catch (Exception e) {
+                System.out.println("Erro na conexão com cliente: " + e.getMessage());
+            }
+        }
     }
 }

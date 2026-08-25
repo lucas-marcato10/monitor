@@ -1,76 +1,53 @@
 package client;
 
-import com.sun.source.tree.WhileLoopTree;
-import core.Session;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
-import java.util.UUID;
 
-public class Client implements IClient{
-    private Session clientSession;
-    private volatile boolean running = true;
-    private Scanner scanner;
+public class Client implements IClient {
+
     @Override
     public void connect(String host, int port) {
         try {
             Socket socket = new Socket(host, port);
-            this.clientSession = new Session(socket);
-            System.out.println("Conectado com: " + host + "na porta: " + port);
 
-            Thread.startVirtualThread(this::outputThread);
-            Thread.startVirtualThread(this::sendMessageThread);
+            // Thread de escuta de mensagens do socket
+            Thread threadLeituraSocket = new Thread(() -> {
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                    String mensagem;
+                    while ((mensagem = in.readLine()) != null) {
+                        System.out.println(mensagem);
+                    }
+                } catch (Exception e) {
+                    System.out.println("Conexão encerrada pelo servidor.");
+                }
+            });
 
+            // Thread de envio das entradas do teclado
+            Thread threadTeclado = new Thread(() -> {
+                try (
+                    PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+                    Scanner scanner = new Scanner(System.in)
+                ) {
+                    while (scanner.hasNextLine()) {
+                        String comando = scanner.nextLine();
+                        out.println(comando);
+                        if (comando.equalsIgnoreCase("Exit")) {
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("Erro ao enviar mensagem: " + e.getMessage());
+                }
+            });
+
+            threadLeituraSocket.start();
+            threadTeclado.start();
+
+        } catch (Exception e) {
+            System.err.println("Erro ao conectar ao servidor: " + e.getMessage());
         }
-        catch (IOException e){
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Runnable sendMessageThread(){
-        return()-> {
-            System.out.println(">");
-            while (running && scanner.hasNextLine()) {
-                String command = scanner.nextLine().trim();
-                if (command.isEmpty()) {
-                    System.out.println(">");
-                    continue;
-                }
-                clientSession.send(command);
-                if (command.contentEquals("EXIT")) {
-                    System.out.println("Shutting Down");
-                    shutdown();
-                    break;
-                }
-            }
-            System.out.println("Connection Closed.");
-        };
-    }
-    private Runnable outputThread(){
-        return ()->{
-            try{
-                String msg;
-                while (running && (msg= clientSession.read())!=null){
-                    System.out.println("From Server: "+msg);
-                }
-            }catch (IOException e){
-                if (running){
-                    System.out.println("Lost Connection");
-                }
-            }
-        };
-    }
-
-    private void shutdown(){
-        this.running = false;
-        this.clientSession.close();
-        this.scanner.close();
-    }
-
-    @Override
-    public UUID getUUID() {
-        return this.clientSession.getUuid();
     }
 }
