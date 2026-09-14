@@ -13,7 +13,7 @@ public class Client implements IClient {
         try {
             Socket socket = new Socket(host, port);
 
-            // Thread de escuta de mensagens do socket
+            // Thread para recebimento de mensagens do socket.
             Thread threadLeituraSocket = new Thread(() -> {
                 try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
                     String mensagem;
@@ -25,7 +25,7 @@ public class Client implements IClient {
                 }
             });
 
-            // Thread de envio das entradas do teclado
+            // Thread de input do teclado.
             Thread threadTeclado = new Thread(() -> {
                 try (
                     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -45,6 +45,10 @@ public class Client implements IClient {
 
             threadLeituraSocket.start();
             threadTeclado.start();
+
+            threadTeclado.join();
+            socket.close();
+            threadLeituraSocket.join();
 
         } catch (Exception e) {
             System.err.println("Erro ao conectar ao servidor: " + e.getMessage());

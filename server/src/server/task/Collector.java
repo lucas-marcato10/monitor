@@ -1,20 +1,24 @@
-package server;
+package server.task;
 
-import core.MonitorTasks;
-import core.Session;
+import server.connection.Session;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Collector implements Runnable {
     private final String tipo;
     private final int intervaloSegundos;
     private final Session session;
     private final MonitorTasks monitorTasks;
+    private final ConcurrentHashMap<String, Collector> monitors;
+    private final String key;
     private volatile boolean rodando = true;
 
-    public Collector(String tipo, int intervaloSegundos, Session session) {
+    public Collector(String tipo, int intervaloSegundos, Session session, ConcurrentHashMap<String, Collector> monitors, String key) {
         this.tipo = tipo;
         this.intervaloSegundos = intervaloSegundos;
         this.session = session;
         this.monitorTasks = new MonitorTasks();
+        this.monitors = monitors;
+        this.key = key;
     }
 
     public void pararMonitoramento() {
@@ -46,5 +50,6 @@ public class Collector implements Runnable {
                 break;
             }
         }
+        monitors.remove(key);
     }
 }
