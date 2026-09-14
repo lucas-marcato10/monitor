@@ -1,7 +1,7 @@
 package client;
 
 public class ClientMain {
-
+    //Valores Default
     private static final String DEFAULT_HOST = "127.0.0.1";
     private static final int DEFAULT_PORT = 12345;
 
@@ -10,8 +10,9 @@ public class ClientMain {
         System.out.println("Cliente - Monitoramento de sistema");
         System.out.println("======================");
 
-        String host = args.length >= 1 ? args[0].trim() : DEFAULT_HOST;
-        int port = args.length >= 2 ? parsePorta(args[1].trim()) : DEFAULT_PORT;
+        String[] config = parseArgs(args);
+        String host = config[0];
+        int port = Integer.parseInt(config[1]);
 
         if (port < 1 || port > 65535) {
             System.out.println("A porta deve estar entre 1 e 65535.");
@@ -25,12 +26,17 @@ public class ClientMain {
         client.connect(host, port);
     }
 
-    private static int parsePorta(String arg) {
-        try {
-            return Integer.parseInt(arg);
-        } catch (NumberFormatException e) {
-            System.out.println("Porta inválida, usando padrão (" + DEFAULT_PORT + ").");
-            return DEFAULT_PORT;
+    private static String[] parseArgs(String[] args) {
+        String host = DEFAULT_HOST;
+        String port = String.valueOf(DEFAULT_PORT);
+
+        for (int i = 0; i < args.length - 1; i++) {
+            switch (args[i]) {
+                case "--hostname" -> host = args[i + 1];
+                case "--port" -> port = args[i + 1];
+            }
         }
+
+        return new String[] { host, port };
     }
 }
