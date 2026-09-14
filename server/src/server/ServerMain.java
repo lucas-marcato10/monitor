@@ -1,37 +1,54 @@
 package server;
 
 import server.connection.Server;
-import java.util.Scanner;
 
 public class ServerMain {
 
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+    private static final String HOST_PADRAO = "127.0.0.1";
+    private static final int PORTA_PADRAO = 12345;
+    private static final int MAX_CLIENTES_PADRAO = 10;
 
+    public static void main(String[] args) {
         System.out.println("======================");
         System.out.println("Servidor - Monitoramento de sistema");
         System.out.println("======================");
 
-        System.out.print("Informe a porta do servidor: ");
-
-        int port;
-
-        try {
-            port = Integer.parseInt(scanner.nextLine());
-        } catch (NumberFormatException e) {
-            System.out.println("Porta inválida, ente novamente.");
-            return;
-        }
+        String host = args.length >= 1 ? args[0].trim() : HOST_PADRAO;
+        int port = args.length >= 2 ? parsePorta(args[1].trim()) : PORTA_PADRAO;
+        int maxClientes = args.length >= 3 ? parseMaxClientes(args[2].trim()) : MAX_CLIENTES_PADRAO;
 
         if (port < 1 || port > 65535) {
             System.out.println("Portas são entre 1 e 65535.");
             return;
         }
 
-        Server server = new Server();
+        if (maxClientes < 1) {
+            System.out.println("O limite de conexões deve ser no mínimo 1.");
+            return;
+        }
 
-        System.out.println("Iniciando na porta " + port + "...");
+        Server server = new Server(maxClientes);
 
-        server.start(port);
+        System.out.println("Iniciando em " + host + ":" + port + " (max " + maxClientes + " clientes)...");
+
+        server.start(host, port);
+    }
+
+    private static int parsePorta(String arg) {
+        try {
+            return Integer.parseInt(arg);
+        } catch (NumberFormatException e) {
+            System.out.println("Porta inválida, usando padrão (" + PORTA_PADRAO + ").");
+            return PORTA_PADRAO;
+        }
+    }
+
+    private static int parseMaxClientes(String arg) {
+        try {
+            return Integer.parseInt(arg);
+        } catch (NumberFormatException e) {
+            System.out.println("Limite de conexões inválido, usando padrão (" + MAX_CLIENTES_PADRAO + ").");
+            return MAX_CLIENTES_PADRAO;
+        }
     }
 }

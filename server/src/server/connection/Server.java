@@ -31,12 +31,12 @@ public class Server implements IServer {
     }
 
     @Override
-    public void bind(ServerSocket serverSocket, int port) {
+    public void bind(ServerSocket serverSocket, String host, int port) {
         try {
-            serverSocket.bind(new InetSocketAddress(port));
-            System.out.println("Vínculo à porta " + port + " feito.");
+            serverSocket.bind(new InetSocketAddress(host, port));
+            System.out.println("Vínculo a " + host + ":" + port + " feito.");
         } catch (IOException e) {
-            throw new RuntimeException("Falha ao fazer bind na porta " + port, e);
+            throw new RuntimeException("Falha ao fazer bind em " + host + ":" + port, e);
         }
     }
 
@@ -57,9 +57,9 @@ public class Server implements IServer {
     }
 
     // Método que responde ao ServerMain
-    public void start(int port) {
+    public void start(String host, int port) {
         ServerSocket serverSocket = createSocket();
-        bind(serverSocket, port);
+        bind(serverSocket, host, port);
         listen(serverSocket);
 
         while (!serverSocket.isClosed()) {
