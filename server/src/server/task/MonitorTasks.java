@@ -1,4 +1,4 @@
-package core;
+package server.task;
 
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;

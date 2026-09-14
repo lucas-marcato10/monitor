@@ -1,4 +1,4 @@
-package core;
+package server.connection;
 
 import java.io.*;
 import java.net.Socket;

@@ -1,7 +1,6 @@
-package server;
+package server.task;
 
-import core.MonitorTasks;
-import core.Session;
+import server.connection.Session;
 
 public class Collector implements Runnable {
     private final String tipo;

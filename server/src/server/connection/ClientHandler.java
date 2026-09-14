@@ -1,17 +1,20 @@
-package server;
+package server.connection;
 
-import core.Session;
+import server.task.Collector;
 import java.io.IOException;
 import java.net.Socket;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientHandler implements Runnable {
     private final Session session;
+    private final AtomicInteger clientesConectados;
     private Collector monitorAtual = null;
 
-    public ClientHandler(Socket socket) throws IOException {
+    public ClientHandler(Socket socket, AtomicInteger clientesConectados) throws IOException {
         this.session = new Session(socket);
+        this.clientesConectados = clientesConectados;
     }
 
     @Override
@@ -52,7 +55,7 @@ public class ClientHandler implements Runnable {
                             int tempo = Integer.parseInt(partes[1]);
 
                             monitorAtual = new Collector(comando, tempo, session);
-                            new Thread(monitorAtual).start();
+                            Thread.ofVirtual().start(monitorAtual);
                             session.send("Iniciando monitoramento de " + comando + " a cada " + tempo + "s.");
                         } catch (NumberFormatException e) {
                             session.send("Sintaxe invalida para tempo.");
@@ -65,6 +68,7 @@ public class ClientHandler implements Runnable {
         } finally {
             pararMonitorAtual();
             session.close();
+            clientesConectados.decrementAndGet();
         }
     }
 
