@@ -5,22 +5,37 @@ import java.io.IOException;
 import java.net.Socket;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientHandler implements Runnable {
     private final Session session;
     private final AtomicInteger clientesConectados;
+    private final ConcurrentHashMap<UUID, ClientHandler> handlers;
     private Collector monitorAtual = null;
+    private AtomicBoolean rejected = new AtomicBoolean();
 
-    public ClientHandler(Socket socket, AtomicInteger clientesConectados) throws IOException {
+    public ClientHandler(Socket socket, AtomicInteger clientesConectados, ConcurrentHashMap<UUID, ClientHandler> handlers, boolean rejected) throws IOException {
         this.session = new Session(socket);
         this.clientesConectados = clientesConectados;
+        this.handlers = handlers;
+        this.rejected.set(rejected);
+    }
+
+    public UUID getUuid() {
+        return session.getUuid();
     }
 
     @Override
     public void run() {
         try {
             String horario = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+            if(this.rejected.getAcquire()){
+                session.send(horario+": LIMITE DE CONEXÕES ATINGIDO!");
+                return;
+            }
             session.send(horario + ": CONECTADO!!");
             session.send("--- MENU DE COMANDOS ---");
             session.send("CPU-X      (ex: CPU-5)");
@@ -68,6 +83,7 @@ public class ClientHandler implements Runnable {
         } finally {
             pararMonitorAtual();
             session.close();
+            handlers.remove(session.getUuid());
             clientesConectados.decrementAndGet();
         }
     }

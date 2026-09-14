@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Server implements IServer {
@@ -12,6 +14,7 @@ public class Server implements IServer {
 
     private final AtomicInteger clientesConectados = new AtomicInteger(0);
     private final int maxClientes;
+    private final ConcurrentHashMap<UUID, ClientHandler> handlers = new ConcurrentHashMap<>();
 
     public Server() {
         this(MAX_CLIENTES_PADRAO);
@@ -65,15 +68,13 @@ public class Server implements IServer {
         while (!serverSocket.isClosed()) {
             try {
                 Socket clientSocket = accept(serverSocket);
-
-                if (clientesConectados.incrementAndGet() > maxClientes) {
-                    clientesConectados.decrementAndGet();
+                int clientPosAccept = clientesConectados.incrementAndGet();
+                boolean rejected = clientPosAccept > maxClientes;
+                if (rejected) {
                     System.out.println("Conexão recusada: limite de " + maxClientes + " clientes atingido.");
-                    try { clientSocket.close(); } catch (IOException ignored) {}
-                    continue;
                 }
-
-                ClientHandler handler = new ClientHandler(clientSocket, clientesConectados);
+                ClientHandler handler = new ClientHandler(clientSocket, clientesConectados, handlers, rejected);
+                handlers.put(handler.getUuid(), handler);
                 Thread.ofVirtual().start(handler);
             } catch (Exception e) {
                 System.out.println("Erro na conexão com cliente: " + e.getMessage());

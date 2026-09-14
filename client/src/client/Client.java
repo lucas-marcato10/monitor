@@ -46,6 +46,10 @@ public class Client implements IClient {
             threadLeituraSocket.start();
             threadTeclado.start();
 
+            threadTeclado.join();
+            socket.close();
+            threadLeituraSocket.join();
+
         } catch (Exception e) {
             System.err.println("Erro ao conectar ao servidor: " + e.getMessage());
         }
