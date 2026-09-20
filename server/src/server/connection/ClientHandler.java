@@ -1,14 +1,15 @@
 package server.connection;
 
-import server.task.Collector;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import server.task.Collector;
 
 public class ClientHandler implements Runnable {
     private final Session session;
@@ -31,10 +32,14 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         try {
-            if(this.rejected.getAcquire()){
+            if (this.rejected.getAcquire()) {
                 session.send(horario() + ": LIMITE DE CONEXÕES ATINGIDO!");
+                try {
+                    Thread.sleep(50); // Garante a entrega no buffer TCP antes do fechamento
+                } catch (InterruptedException ignored) {}
                 return;
             }
+
             session.send(horario() + ": CONECTADO!!");
             session.send("--- MENU DE COMANDOS ---");
             session.send("CPU-X      (ex: CPU-5)");
@@ -65,6 +70,10 @@ public class ClientHandler implements Runnable {
                         try {
                             String comando = partes[0];
                             int tempo = Integer.parseInt(partes[1]);
+                            if (tempo <= 0) {
+                                session.send(horario() + ": O tempo deve ser maior que 0.");
+                                continue;
+                            }
                             String key = comando.toLowerCase();
 
                             Collector existente = monitors.get(key);
@@ -86,7 +95,10 @@ public class ClientHandler implements Runnable {
                     session.send(horario() + ": Comando invalido: " + inputLine);
                 }
             }
+        } catch (SocketException e) {
+            System.out.println(horario() + ": Cliente desconectado abruptamente.");
         } catch (IOException e) {
+            System.out.println(horario() + ": Erro na conexão com o cliente.");
         } finally {
             System.out.println(horario() + ": Cliente desconectado.");
             pararTodosMonitors();

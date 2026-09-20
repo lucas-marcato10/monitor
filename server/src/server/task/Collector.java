@@ -1,7 +1,7 @@
 package server.task;
 
-import server.connection.Session;
 import java.util.concurrent.ConcurrentHashMap;
+import server.connection.Session;
 
 public class Collector implements Runnable {
     private final String tipo;
@@ -37,7 +37,7 @@ public class Collector implements Runnable {
                     resposta = monitorTasks.collectRam();
                 }
 
-                if (rodando && resposta != null) {
+                if (rodando && resposta != null && session.isAlive()) {
                     session.send(resposta);
                 }
 
