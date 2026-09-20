@@ -51,15 +51,12 @@ public class Server implements IServer {
     @Override
     public Socket accept(ServerSocket serverSocket) {
         try {
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("Client connected.");
-            return clientSocket;
+            return serverSocket.accept();
         } catch (IOException e) {
-            throw new RuntimeException("Falha no accept", e);
+            return null;
         }
     }
 
-    // Método que responde ao ServerMain
     public void start(String host, int port) {
         ServerSocket serverSocket = createSocket();
         bind(serverSocket, host, port);
@@ -68,14 +65,27 @@ public class Server implements IServer {
         while (!serverSocket.isClosed()) {
             try {
                 Socket clientSocket = accept(serverSocket);
+                if (clientSocket == null) {
+                    continue;
+                }
+
+                System.out.println("Client connected.");
                 int clientPosAccept = clientesConectados.incrementAndGet();
                 boolean rejected = clientPosAccept > maxClientes;
                 if (rejected) {
                     System.out.println("Conexão recusada: limite de " + maxClientes + " clientes atingido.");
                 }
-                ClientHandler handler = new ClientHandler(clientSocket, clientesConectados, handlers, rejected);
-                handlers.put(handler.getUuid(), handler);
-                Thread.ofVirtual().start(handler);
+
+                try {
+                    ClientHandler handler = new ClientHandler(clientSocket, clientesConectados, handlers, rejected);
+                    handlers.put(handler.getUuid(), handler);
+                    Thread.ofVirtual().start(handler);
+                } catch (Exception e) {
+                    if (!rejected) {
+                        clientesConectados.decrementAndGet();
+                    }
+                    System.out.println("Erro ao inicializar sessão do cliente: " + e.getMessage());
+                }
             } catch (Exception e) {
                 System.out.println("Erro na conexão com cliente: " + e.getMessage());
             }
